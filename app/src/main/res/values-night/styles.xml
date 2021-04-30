@@ -1,0 +1,60 @@
+<resources>
+
+    <!-- Base application theme. -->
+    <style name="AppTheme" parent="@style/Theme.AppCompat.Light.DarkActionBar">
+        <!-- Customize your theme here. -->
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorAccent">@color/colorPrimaryDark</item>
+        <item name="android:itemTextAppearance">@style/MyActionBar.MenuTextStyle</item>
+        <!--To change the background of options menu-->
+        <item name="android:itemBackground">@color/colorPrimary</item>
+    </style>
+
+    <style name="AppTheme.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+    </style>
+
+    <style name="FullscreenActionBarStyle" parent="@style/Widget.AppCompat.ActionBar">
+        <item name="background">@color/black_overlay</item>
+    </style>
+
+    <style name="AppTheme.AppBarOverlay" parent="@style/ThemeOverlay.AppCompat.Dark.ActionBar" />
+
+    <style name="AppTheme.PopupOverlay" parent="@style/ThemeOverlay.AppCompat.Light" />
+
+
+
+    <style name="MyActionBar.MenuTextStyle" parent="@style/TextAppearance.AppCompat.Widget.ActionBar.Title">
+        <item name="android:textColor">@color/white</item>
+        <item name="android:textSize">16sp</item>
+    </style>
+    <style name="SCBSwitch" parent="Theme.AppCompat.Light">
+        <!-- active thumb & track color (30% transparency) -->
+        <item name="colorControlActivated">@color/accent</item>
+
+    </style>
+
+    <style name="ProgressBarStyle">
+        <item name="colorAccent">@color/accent</item>
+    </style>
+
+    <style name="SplashTheme" parent="@style/Theme.AppCompat.Light.DarkActionBar">
+        <item name="android:windowBackground">@drawable/background_splash</item>
+        <item name="colorPrimary">@color/secondary_text</item>
+        <item name="colorPrimaryDark">@color/secondary_text</item>
+        <item name="colorAccent">@color/secondary_text</item>
+        <!--To change the background of options menu-->
+        <item name="android:itemBackground">@color/secondary_text</item>
+        <item name="android:statusBarColor">@color/secondary_text</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+
+    <style name="Divider">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">2dp</item>
+        <item name="android:background">@color/accent_dark_light</item>
+    </style>
+
+</resources>
