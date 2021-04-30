@@ -1,6 +1,7 @@
 package com.example.digitalplatformclient.ui.gallery;
 
 import android.content.Context;
+import android.content.res.Configuration;
 import android.os.Bundle;
 
 import androidx.fragment.app.Fragment;
@@ -35,9 +36,7 @@ import ru.alexbykov.nopaginate.paginate.NoPaginate;
  */
 public class MovieFragment extends Fragment {
     private MovieFragment viewsingle;
-    private OkHttpClient client = new OkHttpClient();
     private static final String ARG_COLUMN_COUNT = "column-count";
-    private int mColumnCount = 3;
     private int page = 1;
     private MovieRecyclerViewAdapter adapter;
     private boolean loadmore = true;
@@ -62,10 +61,6 @@ public class MovieFragment extends Fragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        if (getArguments() != null) {
-            mColumnCount = getArguments().getInt(ARG_COLUMN_COUNT);
-        }
     }
 
     @Override
@@ -78,11 +73,12 @@ public class MovieFragment extends Fragment {
         if (view instanceof RecyclerView) {
             Context context = view.getContext();
             RecyclerView recyclerView = (RecyclerView) view;
-            if (mColumnCount <= 1) {
-                recyclerView.setLayoutManager(new LinearLayoutManager(context));
+            if (getActivity().getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT) {
+                recyclerView.setLayoutManager(new GridLayoutManager(getActivity(), 3));
             } else {
-                recyclerView.setLayoutManager(new GridLayoutManager(context, mColumnCount));
+                recyclerView.setLayoutManager(new GridLayoutManager(getActivity(), 5));
             }
+
             adapter = new MovieRecyclerViewAdapter(new JSONArray());
             recyclerView.setAdapter(adapter);
 
@@ -98,7 +94,20 @@ public class MovieFragment extends Fragment {
         }
         return view;
     }
+    @Override
+    public void onConfigurationChanged(Configuration newConfig) {
 
+        View view = getView();
+        if (view instanceof RecyclerView) {
+            RecyclerView recyclerView = (RecyclerView) view;
+            if (newConfig.orientation == Configuration.ORIENTATION_PORTRAIT) {
+                recyclerView.setLayoutManager(new GridLayoutManager(getActivity(), 3));
+            } else {
+                recyclerView.setLayoutManager(new GridLayoutManager(getActivity(), 5));
+            }
+        }
+        super.onConfigurationChanged(newConfig);
+    }
     private void loadMore(RecyclerView view) {
         if (loadmore) {
             loadmore = false;
