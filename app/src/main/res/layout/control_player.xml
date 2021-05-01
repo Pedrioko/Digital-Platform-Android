@@ -58,7 +58,8 @@
             android:layout_height="50dp"
 
             android:layout_gravity="bottom|left"
-            android:background="#CC000000" />
+            android:background="#CC000000"
+            android:visibility="invisible" />
 
         <Space
             android:layout_width="wrap_content"
@@ -121,8 +122,8 @@
             android:layout_weight="1" />
 
         <ImageButton
-            android:id="@+id/next_button_player"
-            style="@style/ExoMediaButton.Next"
+            android:id="@+id/fullscreen_button"
+            style="@style/ExoStyledControls.Button.Bottom.FullScreen"
             android:layout_width="50dp"
             android:layout_height="50dp"
             android:layout_gravity="bottom|right"

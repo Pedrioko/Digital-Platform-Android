@@ -50,7 +50,7 @@ public class PlayerActivity extends AppCompatActivity {
     private SimpleExoPlayer player;
     private String url;
     private PlayerNotificationManager playerNotificationManager;
-    private static final String CHANNEL_ID = "4";
+    private static final String CHANNEL_ID = "5";
     private MediaSessionCompat mediaSession;
     private MediaSessionConnector mediaSessionConnector;
     private final Handler mHideHandler = new Handler();
@@ -91,7 +91,19 @@ public class PlayerActivity extends AppCompatActivity {
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
         setContentView(R.layout.activity_player);
         mContentView = findViewById(R.id.player_container);
+        View viewById = findViewById(R.id.fullscreen_button);
         ActionBar actionBar = getSupportActionBar();
+        viewById.setOnClickListener((event) -> {
+            if (mVisible) {
+                hide();
+            } else {
+                mContentView.setSystemUiVisibility(
+                        View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+
+                                | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN);
+                mVisible = true;
+            }
+        });
         if (actionBar != null) {
             actionBar.hide();
         }
@@ -144,6 +156,13 @@ public class PlayerActivity extends AppCompatActivity {
     private void toggle() {
         if (mVisible) {
             hide();
+        } else {
+            mContentView.setSystemUiVisibility(
+                    View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                            | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                            | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN);
+            getActionBar().show();
+
         }
     }
 
@@ -156,10 +175,12 @@ public class PlayerActivity extends AppCompatActivity {
         // are available.
         delayedHide(100);
     }
+
     private void delayedHide(int delayMillis) {
         mHideHandler.removeCallbacks(mHideRunnable);
         mHideHandler.postDelayed(mHideRunnable, delayMillis);
     }
+
     private void hide() {
         // Hide UI first
         ActionBar actionBar = getSupportActionBar();
@@ -227,6 +248,7 @@ public class PlayerActivity extends AppCompatActivity {
             channel.setDescription(description);
             channel.enableVibration(false);
             channel.enableLights(false);
+            channel.setSound(null, null);
             // Register the channel with the system; you can't change the importance
             // or other notification behaviors after this
             NotificationManager notificationManager = getSystemService(NotificationManager.class);
