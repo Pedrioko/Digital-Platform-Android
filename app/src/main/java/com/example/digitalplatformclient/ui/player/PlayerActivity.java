@@ -1,9 +1,11 @@
 package com.example.digitalplatformclient.ui.player;
 
 import android.annotation.SuppressLint;
+import android.app.AlertDialog;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
@@ -20,31 +22,37 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.NotificationCompat;
 
 import com.example.digitalplatformclient.R;
+import com.example.digitalplatformclient.ui.player.exo.ExtendedCollector;
 import com.google.android.exoplayer2.DefaultLoadControl;
 import com.google.android.exoplayer2.DefaultRenderersFactory;
 import com.google.android.exoplayer2.ExoPlaybackException;
-import com.google.android.exoplayer2.ExoPlayerFactory;
 import com.google.android.exoplayer2.LoadControl;
+import com.google.android.exoplayer2.MediaItem;
+import com.google.android.exoplayer2.PlaybackException;
+import com.google.android.exoplayer2.PlaybackParameters;
 import com.google.android.exoplayer2.Player;
 import com.google.android.exoplayer2.SimpleExoPlayer;
+import com.google.android.exoplayer2.analytics.AnalyticsCollector;
 import com.google.android.exoplayer2.ext.mediasession.MediaSessionConnector;
-import com.google.android.exoplayer2.extractor.DefaultExtractorsFactory;
-import com.google.android.exoplayer2.source.ExtractorMediaSource;
+import com.google.android.exoplayer2.source.DefaultMediaSourceFactory;
+import com.google.android.exoplayer2.source.MediaSourceFactory;
 import com.google.android.exoplayer2.source.TrackGroupArray;
 import com.google.android.exoplayer2.trackselection.AdaptiveTrackSelection;
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector;
+import com.google.android.exoplayer2.trackselection.ExoTrackSelection;
 import com.google.android.exoplayer2.trackselection.RandomTrackSelection;
-import com.google.android.exoplayer2.trackselection.TrackSelection;
 import com.google.android.exoplayer2.trackselection.TrackSelectionArray;
 import com.google.android.exoplayer2.trackselection.TrackSelector;
 import com.google.android.exoplayer2.ui.PlayerNotificationManager;
 import com.google.android.exoplayer2.ui.PlayerView;
-import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory;
-import com.google.android.exoplayer2.util.Util;
+import com.google.android.exoplayer2.upstream.DefaultBandwidthMeter;
+
+import java.util.Arrays;
+import java.util.List;
 
 public class PlayerActivity extends AppCompatActivity {
     private TrackSelector trackSelector;
-    private TrackSelection.Factory trackSelectionFactory;
+    private ExoTrackSelection.Factory trackSelectionFactory;
     private PlayerView simpleExoPlayerView;
     private LoadControl loadControl;
     private SimpleExoPlayer player;
@@ -81,6 +89,11 @@ public class PlayerActivity extends AppCompatActivity {
             hide();
         }
     };
+    private DefaultBandwidthMeter bandwidthMeter;
+    private ExtendedCollector analyticsCollector;
+    private MediaSourceFactory mediaSourceFactory;
+    private DefaultRenderersFactory renderersFactory;
+    private int playbackPosition = 2;
 
     @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
@@ -91,9 +104,9 @@ public class PlayerActivity extends AppCompatActivity {
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
         setContentView(R.layout.activity_player);
         mContentView = findViewById(R.id.player_container);
-        View viewById = findViewById(R.id.fullscreen_button);
+        View fullscreen_button = findViewById(R.id.fullscreen_button);
         ActionBar actionBar = getSupportActionBar();
-        viewById.setOnClickListener((event) -> {
+        fullscreen_button.setOnClickListener((event) -> {
             if (mVisible) {
                 hide();
             } else {
@@ -104,14 +117,63 @@ public class PlayerActivity extends AppCompatActivity {
                 mVisible = true;
             }
         });
+
+        View playback_button = findViewById(R.id.playback_button);
+        playback_button.setOnClickListener(event -> {
+            AlertDialog.Builder alertDialog = new AlertDialog.Builder(this);
+            alertDialog.setTitle(getString(R.string.playback_speed));
+            String[] speeds = Arrays.asList("0.5x", "0.75x", "Normal(1x)", "1.25x", "1.5x").toArray(new String[5]);
+            int checkedItem = playbackPosition;
+            alertDialog.setSingleChoiceItems(speeds, checkedItem, (dialog, pos) ->
+            {
+                switch (pos) {
+                    case 0:
+                        player.setPlaybackParameters(new PlaybackParameters(0.5f));
+                        break;
+                    case 1:
+                        player.setPlaybackParameters(new PlaybackParameters(0.75f));
+                        break;
+                    case 3:
+                        player.setPlaybackParameters(new PlaybackParameters(1.25f));
+                        break;
+                    case 4:
+                        player.setPlaybackParameters(new PlaybackParameters(1.5f));
+                        break;
+                    default:
+                        player.setPlaybackParameters(new PlaybackParameters(1f));
+                        break;
+                }
+
+                playbackPosition=pos;
+            });
+            alertDialog.setPositiveButton("Ok",(
+                dialog, i) ->{
+                        player.setPlayWhenReady(true);
+                dialog.dismiss();
+
+                hide();
+
+            });
+            AlertDialog alert = alertDialog.create();
+            alert.setCanceledOnTouchOutside(false);
+            alert.show();
+        });
+
         if (actionBar != null) {
             actionBar.hide();
         }
         Intent intent = getIntent();
         url = intent.getStringExtra("url");
         simpleExoPlayerView = findViewById(R.id.player_view);
-        String parent = intent.getStringExtra("parent");
-        loadControl = new DefaultLoadControl();
+        loadControl = new DefaultLoadControl
+                .Builder()
+                .setBufferDurationsMs(
+                        2 * 60 * 1000, // this is it!
+                        10 * 60 * 1000,
+                        DefaultLoadControl.DEFAULT_BUFFER_FOR_PLAYBACK_MS,
+                        DefaultLoadControl.DEFAULT_BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS
+                )
+                .build();
         String abrAlgorithm = intent.getStringExtra("abr_algorithm");
         if (abrAlgorithm == null || "default".equals(abrAlgorithm)) {
             trackSelectionFactory = new AdaptiveTrackSelection.Factory();
@@ -122,27 +184,34 @@ public class PlayerActivity extends AppCompatActivity {
             return;
         }
 
-        trackSelector = new DefaultTrackSelector(trackSelectionFactory);
-        player = ExoPlayerFactory.newSimpleInstance(this, new DefaultRenderersFactory(this), trackSelector, loadControl);
+        trackSelector = new DefaultTrackSelector(this, trackSelectionFactory);
+        mediaSourceFactory = new DefaultMediaSourceFactory(this);
+        renderersFactory = new DefaultRenderersFactory(this);
+        bandwidthMeter = new DefaultBandwidthMeter.Builder(this).build();
+        analyticsCollector = new ExtendedCollector();
+        player = new SimpleExoPlayer.Builder(this, renderersFactory, trackSelector, mediaSourceFactory, loadControl, bandwidthMeter, analyticsCollector)
+                .build();
         simpleExoPlayerView.setPlayer(player);
         mediaSession = new MediaSessionCompat(PlayerActivity.this, "ConstantValues.MEDIA_SESSION_TAG");
         mediaSession.setActive(true);
-        playerNotificationManager = new PlayerNotificationManager(
+        playerNotificationManager = new PlayerNotificationManager.Builder(
                 this,
-                CHANNEL_ID,
                 2,
-                new DescriptionAdapter(), new PlayerNotificationManager.NotificationListener() {
-            @Override
-            public void onNotificationCancelled(int notificationId, boolean dismissedByUser) {
+                CHANNEL_ID)
+                .setMediaDescriptionAdapter(new DescriptionAdapter())
+                .setNotificationListener(new PlayerNotificationManager.NotificationListener() {
+                    @Override
+                    public void onNotificationCancelled(int notificationId, boolean dismissedByUser) {
 
-            }
+                    }
 
-            @Override
-            public void onNotificationPosted(int notificationId, Notification notification, boolean ongoing) {
+                    @Override
+                    public void onNotificationPosted(int notificationId, Notification notification, boolean ongoing) {
 
-            }
-        });
-        addListenerToPlayer();
+                    }
+                })
+                .build();
+
         playerNotificationManager.setPlayer(player);
         playerNotificationManager.setVisibility(NotificationCompat.VISIBILITY_PUBLIC);
         playerNotificationManager.setMediaSessionToken(mediaSession.getSessionToken());
@@ -194,8 +263,9 @@ public class PlayerActivity extends AppCompatActivity {
     }
 
     private void play(String url) {
-        player.prepare(new ExtractorMediaSource.Factory(new DefaultDataSourceFactory(this,
-                Util.getUserAgent(this, getString(R.string.app_name)))).setExtractorsFactory(new DefaultExtractorsFactory()).createMediaSource(getURI(url)));
+        MediaItem mediaItem = MediaItem.fromUri(getURI(url));
+        player.setMediaItem(mediaItem);
+        player.prepare();
         player.setPlayWhenReady(true);
 
     }
@@ -204,32 +274,6 @@ public class PlayerActivity extends AppCompatActivity {
         return Uri.parse(url);
     }
 
-    private void addListenerToPlayer() {
-        player.addListener(new Player.EventListener() {
-
-
-            @Override
-            public void onTracksChanged(TrackGroupArray trackGroups, TrackSelectionArray trackSelections) {
-
-            }
-
-            @Override
-            public void onLoadingChanged(boolean isLoading) {
-
-            }
-
-            @Override
-            public void onPlayerStateChanged(boolean playWhenReady, int playbackState) {
-
-            }
-
-            @Override
-            public void onPlayerError(ExoPlaybackException error) {
-
-            }
-
-        });
-    }
 
     @Override
     public void onBackPressed() {
